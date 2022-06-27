@@ -1,15 +1,12 @@
 import fs from "fs";
 import path from "path";
 
-type PathParamType = string | Buffer | URL;
-
-const pathIsChild = (rootPath: PathParamType, childPath: PathParamType): boolean => {
-    return false;
-};
+import { PathParamType } from "./types";
+import { absPath } from "./utils";
 
 /**
- * Creates a new root FS scoped to the provided directory.
- */
+* Creates a new root FS scoped to the provided directory.
+*/
 export default function fsRoot<T extends typeof fs = typeof fs>(rootDir: string, fsBase: T = fs as T): T {
     // Absolute path to the new root directory
     const absRootDir = path.resolve(rootDir);
@@ -87,22 +84,37 @@ export default function fsRoot<T extends typeof fs = typeof fs>(rootDir: string,
     ];
 
     // New fs namespace
-    return Object.create({
+    return Object.assign({},
         // Create new stubs for each API group
         // Single parameter
-        ...fsApiKeys1.reduce(
+        fsApiKeys1.reduce(
             (prev, cur) => ({
                 ...prev,
                 ...(Object.prototype.hasOwnProperty.call(fsBase, cur)
                     ? {
-                          [cur]: (p: PathParamType, ...args: any) => {
-                              return (fsBase[cur as keyof T] as any).call(fsBase, p, ...args);
-                          },
-                      }
+                        [cur]: (p: PathParamType, ...args: any) => {
+                            const absp = absPath(rootDir, p);
+                            return (fsBase[cur as keyof T] as any).call(fsBase, absp, ...args);
+                        },
+                    }
                     : undefined),
             }),
             {}
         ),
         // Two parameter
-    }) as T;
+        fsApiKeys2.reduce(
+            (prev, cur) => ({
+                ...prev,
+                ...(Object.prototype.hasOwnProperty.call(fsBase, cur)
+                    ? {
+                        [cur]: (p: PathParamType, p2: PathParamType, ...args: any) => {
+                            const absp = absPath(rootDir, p);
+                            const absp2 = absPath(rootDir, p2);
+                            return (fsBase[cur as keyof T] as any).call(fsBase, absp, absp2, ...args);
+                        },
+                    } : undefined),
+            }),
+            {}
+        )
+    ) as T;
 }

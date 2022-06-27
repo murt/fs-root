@@ -18,6 +18,6 @@
         "lib": ["ES2015"],
         "noEmitOnError": true,
         "moduleResolution": "node",
-        "types": ["node"]
+        "types": ["node", "jest"]
     }
 }
